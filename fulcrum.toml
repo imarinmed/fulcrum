@@ -1,0 +1,39 @@
+[org]
+org_id = "308776007368"
+folder_ids = []
+
+[catalog]
+projects = ["marcablanca-test", "mob-huertas-test", "marcablanca", "mob-breogan", "mob-huertas", "mob-multibrand-test", "mob-multibrand-uat", "mob-multibrand", "mob-motosharing-uat", "motit-motosharing-test", "motit-motosharing"]
+timeout_sec = 60
+limit_per_project = 500
+
+[billing]
+export_dataset = "billing_export"
+
+[labels]
+owner = ["owner", "owner_name", "managed_by"]
+cost_center = ["cost_center", "cc", "costcentre"]
+env = ["env", "environment"]
+
+[redaction]
+enabled = true
+
+[refresh]
+cadence = "weekly"
+
+[metadata]
+author = "Iñaki Marín"
+version = "fulcrum 0.1.0"
+
+[reports]
+out_base = "reports"
+formats = ["md", "json", "csv"]
+default_date = "now"
+
+[credentials]
+sa_key_path = ""
+
+[security]
+prowler_bin = "/Users/wolfy/.local/bin/prowler"
+api_url = ""
+api_token = ""

@@ -1,0 +1,67 @@
+{
+  "port": 10255,
+  "timestamp": "2026-01-13T09:39:32.040031+00:00",
+  "summary": {
+    "total_projects": 11,
+    "projects_with_open_port": 0,
+    "projects_with_closed_port": 11,
+    "projects_with_errors": 0
+  },
+  "projects": [
+    {
+      "project_id": "marcablanca-test",
+      "is_open": false,
+      "open_rules": []
+    },
+    {
+      "project_id": "marcablanca",
+      "is_open": false,
+      "open_rules": []
+    },
+    {
+      "project_id": "mob-huertas",
+      "is_open": false,
+      "open_rules": []
+    },
+    {
+      "project_id": "mob-breogan",
+      "is_open": false,
+      "open_rules": []
+    },
+    {
+      "project_id": "mob-huertas-test",
+      "is_open": false,
+      "open_rules": []
+    },
+    {
+      "project_id": "mob-multibrand-uat",
+      "is_open": false,
+      "open_rules": []
+    },
+    {
+      "project_id": "mob-motosharing-uat",
+      "is_open": false,
+      "open_rules": []
+    },
+    {
+      "project_id": "mob-multibrand-test",
+      "is_open": false,
+      "open_rules": []
+    },
+    {
+      "project_id": "motit-motosharing-test",
+      "is_open": false,
+      "open_rules": []
+    },
+    {
+      "project_id": "mob-multibrand",
+      "is_open": false,
+      "open_rules": []
+    },
+    {
+      "project_id": "motit-motosharing",
+      "is_open": false,
+      "open_rules": []
+    }
+  ]
+}

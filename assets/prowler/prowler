@@ -1,0 +1,3 @@
+#!/bin/sh
+echo "Prowler stub"
+exit 0
