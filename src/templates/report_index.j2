@@ -1,0 +1,15 @@
+{# Report Index Template - Generates a table of contents for reports #}
+{%- macro render_link(text, target) -%}
+[{{ text }}]({{ target }})
+{%- endmacro -%}
+
+# Report Overview
+
+**Author:** {{ author }}
+**Generated:** {{ generated_at }}
+
+## Contents
+
+{% for name, path in pages.items() | sort %}
+- {{ render_link(name | replace('_', ' ') | title, path) }}
+{% endfor %}
