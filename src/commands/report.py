@@ -1,5 +1,6 @@
 """Report commands for Fulcrum CLI."""
 
+import asyncio
 import os
 import sys
 import time
@@ -58,6 +59,55 @@ def _get_cli_defaults():
             "slides_dir": None,
             "projects": [],
         }
+
+
+async def _wait_for_completion_async(
+    report_dir: str, total_checks: int, prog, main_task
+):
+    """Async version of progress polling loop.
+
+    This replaces the blocking time.sleep(0.1) loop with asyncio.sleep
+    for better async integration.
+    """
+    last_update = time.time()
+    updates = {
+        "compute": 0,
+        "networking": 0,
+        "security": 0,
+        "storage": 0,
+        "sql": 0,
+        "gke": 0,
+    }
+    categories = ["compute", "networking", "security", "storage", "sql", "gke"]
+
+    while not prog.finished:
+        current_state = read_state(report_dir)
+        if current_state:
+            completed = sum(
+                1
+                for p in current_state
+                for cat in categories
+                if current_state[p]["categories"][cat]["completed"]
+            )
+            if completed >= total_checks:
+                prog.update(main_task, completed=total_checks)
+                break
+            prog.update(main_task, completed=completed)
+
+            if time.time() - last_update > 0.5:
+                for p in current_state:
+                    for cat in categories:
+                        if current_state[p]["categories"][cat][
+                            "completed"
+                        ] and not updates.get(f"{p}_{cat}"):
+                            updates[f"{p}_{cat}"] = True
+                            log.info(
+                                "project_category_completed",
+                                project=p,
+                                category=cat,
+                            )
+                last_update = time.time()
+        await asyncio.sleep(0.1)
 
 
 def create_progress_columns():
@@ -190,58 +240,10 @@ def report_generate(
             f"[cyan]Collecting GCP metadata for {total_projects} projects...",
             total=total_checks,
         )
-        last_update = time.time()
-        updates: dict = {
-            "compute": 0,
-            "networking": 0,
-            "security": 0,
-            "storage": 0,
-            "sql": 0,
-            "gke": 0,
-        }
         try:
-            while not prog.finished:
-                current_state = read_state(report_dir)
-                if current_state:
-                    completed = sum(
-                        1
-                        for p in current_state
-                        for cat in [
-                            "compute",
-                            "networking",
-                            "security",
-                            "storage",
-                            "sql",
-                            "gke",
-                        ]
-                        if current_state[p]["categories"][cat]["completed"]
-                    )
-                    if completed >= total_checks:
-                        prog.update(main_task, completed=total_checks)
-                        break
-                    prog.update(main_task, completed=completed)
-
-                    if time.time() - last_update > 0.5:
-                        for p in current_state:
-                            for cat in [
-                                "compute",
-                                "networking",
-                                "security",
-                                "storage",
-                                "sql",
-                                "gke",
-                            ]:
-                                if current_state[p]["categories"][cat][
-                                    "completed"
-                                ] and not updates.get(f"{p}_{cat}"):
-                                    updates[f"{p}_{cat}"] = True
-                                    log.info(
-                                        "project_category_completed",
-                                        project=p,
-                                        category=cat,
-                                    )
-                        last_update = time.time()
-                time.sleep(0.1)
+            asyncio.run(
+                _wait_for_completion_async(report_dir, total_checks, prog, main_task)
+            )
         except KeyboardInterrupt:
             console.print("\n[yellow]Interrupted by user[/]")
             raise typer.Exit(0)
