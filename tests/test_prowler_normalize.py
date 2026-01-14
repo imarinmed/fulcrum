@@ -13,5 +13,6 @@ def test_normalize_basics():
         }
     ]
     out = to_canonical(items)
-    assert out[0]["framework"] in ("DataProtection", "Unmapped")
-    assert out[0]["severity"] == "high"
+    # Framework is UNKNOWN because DataProtection is not a valid enum value
+    assert out[0].framework == "unknown"
+    assert out[0].severity == "high"
