@@ -1,10 +1,15 @@
 import os
-import sys
 from datetime import datetime, timezone
 
+
 def test_get_cli_defaults_now(tmp_path, monkeypatch):
-    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-    from src.core.settings import Settings, save_settings, load_settings, get_cli_defaults
+    from src.core.settings import (
+        Settings,
+        save_settings,
+        load_settings,
+        get_cli_defaults,
+    )
+
     cfg = tmp_path / "fulcrum.toml"
     s = Settings()
     s.metadata.author = "Iñaki Marín"
@@ -17,9 +22,15 @@ def test_get_cli_defaults_now(tmp_path, monkeypatch):
     assert d["author"] == "Iñaki Marín"
     assert d["report_date"] == datetime.now(timezone.utc).strftime("%Y%m%d")
 
+
 def test_preflight_prowler_bin_resolution(tmp_path, monkeypatch):
-    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-    from src.core.settings import Settings, save_settings, load_settings, get_cli_defaults
+    from src.core.settings import (
+        Settings,
+        save_settings,
+        load_settings,
+        get_cli_defaults,
+    )
+
     cfg = tmp_path / "fulcrum.toml"
     assets_dir = tmp_path / "assets" / "prowler"
     assets_dir.mkdir(parents=True)

@@ -1,6 +1,6 @@
 import json
 import os
-import sys
+
 
 def test_generate_used_services_summary(tmp_path):
     out_dir = tmp_path.as_posix()
@@ -14,8 +14,8 @@ def test_generate_used_services_summary(tmp_path):
     ]
     with open(os.path.join(raw_dir, "demo_assets.json"), "w") as f:
         json.dump(assets, f)
-    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
     from src.core.docs import generate_used_services_summary
+
     rel = generate_used_services_summary(out_dir)
     path = os.path.join(out_dir, "executive", rel)
     assert os.path.exists(path)

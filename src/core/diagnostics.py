@@ -1,15 +1,23 @@
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Optional
 import structlog
 
 log = structlog.get_logger()
 
+
 class DiagnosticResult:
-    def __init__(self, check_name: str, passed: bool, message: str, details: Optional[Dict] = None):
+    def __init__(
+        self,
+        check_name: str,
+        passed: bool,
+        message: str,
+        details: Optional[Dict] = None,
+    ):
         self.check_name = check_name
         self.passed = passed
         self.message = message
         self.details = details or {}
+
 
 class DiagnosticCheck(ABC):
     @property
@@ -20,6 +28,7 @@ class DiagnosticCheck(ABC):
     @abstractmethod
     def run(self) -> DiagnosticResult:
         pass
+
 
 class DiagnosticsManager:
     def __init__(self):
@@ -36,5 +45,7 @@ class DiagnosticsManager:
                 results.append(result)
             except Exception as e:
                 log.error("diagnostic.check_failed", check=check.name, error=str(e))
-                results.append(DiagnosticResult(check.name, False, f"Exception: {str(e)}"))
+                results.append(
+                    DiagnosticResult(check.name, False, f"Exception: {str(e)}")
+                )
         return results

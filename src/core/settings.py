@@ -3,28 +3,48 @@ import os
 from pydantic import BaseModel, Field
 import tomlkit
 
+
 class OrgSettings(BaseModel):
     org_id: str = ""
     folder_ids: List[str] = Field(default_factory=list)
+
 
 class CatalogSettings(BaseModel):
     projects: List[str] = Field(default_factory=list)
     timeout_sec: int = 60
     limit_per_project: int = 500
 
+
 class BillingSettings(BaseModel):
     export_dataset: str = "billing_export"
 
+
 class LabelsSettings(BaseModel):
-    owner: List[str] = Field(default_factory=lambda: ["owner", "owner_name", "managed_by"])
-    cost_center: List[str] = Field(default_factory=lambda: ["cost_center", "cc", "costcentre"])
+    owner: List[str] = Field(
+        default_factory=lambda: ["owner", "owner_name", "managed_by"]
+    )
+    cost_center: List[str] = Field(
+        default_factory=lambda: ["cost_center", "cc", "costcentre"]
+    )
     env: List[str] = Field(default_factory=lambda: ["env", "environment"])
+
 
 class RedactionSettings(BaseModel):
     enabled: bool = True
 
+
 class RefreshSettings(BaseModel):
     cadence: str = "weekly"
+
+
+class DecommissionSettings(BaseModel):
+    """Settings for decommission operations."""
+
+    bucket_whitelist: List[str] = Field(
+        default_factory=list,
+        description="List of bucket names to preserve during decommissioning",
+    )
+
 
 class Settings(BaseModel):
     org: OrgSettings = OrgSettings()
@@ -33,21 +53,28 @@ class Settings(BaseModel):
     labels: LabelsSettings = LabelsSettings()
     redaction: RedactionSettings = RedactionSettings()
     refresh: RefreshSettings = RefreshSettings()
+
     class CredentialsSettings(BaseModel):
         sa_key_path: Optional[str] = None
         impersonate_service_account: Optional[str] = None
         quota_project: Optional[str] = None
+
     credentials: CredentialsSettings = CredentialsSettings()
+
     class SecuritySettings(BaseModel):
         prowler_bin: str = "assets/prowler/prowler"
         api_url: str = ""
         api_token: str = ""
+
     security: SecuritySettings = SecuritySettings()
+
     class ReportsSettings(BaseModel):
         out_base: str = "reports"
-        formats: List[str] = Field(default_factory=lambda: ["md","json","csv"])
+        formats: List[str] = Field(default_factory=lambda: ["md", "json", "csv"])
         default_date: str = "now"
+
     reports: ReportsSettings = ReportsSettings()
+
     class OutputSettings(BaseModel):
         base_dir: str = "master-report"
         summary_path: str = ""
@@ -55,11 +82,24 @@ class Settings(BaseModel):
         csv_dir: str = ""
         access_dir: str = ""
         raw_dir: str = ""
+
     output: OutputSettings = OutputSettings()
+
+    decommission: DecommissionSettings = Field(default_factory=DecommissionSettings)
+
     class MetadataSettings(BaseModel):
         author: str = "Iñaki Marín"
         version: str = "fulcrum 0.1.0"
-    metadata: MetadataSettings = MetadataSettings()
+
+
+class DecommissionSettings(BaseModel):
+    """Settings for decommission operations."""
+
+    bucket_whitelist: List[str] = Field(
+        default_factory=list,
+        description="List of bucket names to preserve during decommissioning",
+    )
+
 
 def default_paths() -> List[str]:
     paths: List[str] = []
@@ -69,12 +109,14 @@ def default_paths() -> List[str]:
     paths.append(os.path.join(xdg, "fulcrum", "fulcrum.toml"))
     return paths
 
+
 def locate_config(explicit: Optional[str] = None) -> Optional[str]:
     candidates = [explicit] if explicit else default_paths()
     for p in candidates:
         if p and os.path.exists(p):
             return p
     return explicit or candidates[0]
+
 
 def load_settings(path: Optional[str] = None) -> Settings:
     cfg_path = locate_config(path)
@@ -93,8 +135,10 @@ def load_settings(path: Optional[str] = None) -> Settings:
             reports=Settings.ReportsSettings(**data.get("reports", {})),
             output=Settings.OutputSettings(**data.get("output", {})),
             metadata=Settings.MetadataSettings(**data.get("metadata", {})),
+            decommission=DecommissionSettings(**data.get("decommission", {})),
         )
     return Settings()
+
 
 def save_settings(path: Optional[str], s: Settings) -> str:
     cfg_path = locate_config(path)
@@ -119,7 +163,9 @@ def save_settings(path: Optional[str], s: Settings) -> str:
     doc["refresh"]["cadence"] = s.refresh.cadence
     doc.add("credentials", tomlkit.table())
     doc["credentials"]["sa_key_path"] = s.credentials.sa_key_path or ""
-    doc["credentials"]["impersonate_service_account"] = s.credentials.impersonate_service_account or ""
+    doc["credentials"]["impersonate_service_account"] = (
+        s.credentials.impersonate_service_account or ""
+    )
     doc["credentials"]["quota_project"] = s.credentials.quota_project or ""
     doc.add("security", tomlkit.table())
     doc["security"]["prowler_bin"] = s.security.prowler_bin
@@ -139,23 +185,33 @@ def save_settings(path: Optional[str], s: Settings) -> str:
     doc.add("metadata", tomlkit.table())
     doc["metadata"]["author"] = s.metadata.author
     doc["metadata"]["version"] = s.metadata.version
+    doc.add("decommission", tomlkit.table())
+    doc["decommission"]["bucket_whitelist"] = s.decommission.bucket_whitelist
     with open(cfg_path, "w") as f:
         f.write(tomlkit.dumps(doc))
     return cfg_path
 
+
 def get_cli_defaults(s: Settings, cfg_path: Optional[str] = None) -> dict:
     from datetime import datetime, timezone
+
     cfg_dir = os.path.dirname(locate_config(cfg_path) or "")
     def_date = s.reports.default_date or "now"
-    date_resolved = datetime.now(timezone.utc).strftime("%Y%m%d") if def_date == "now" else def_date
-    assets_bin = os.path.join(cfg_dir, s.security.prowler_bin) if cfg_dir else s.security.prowler_bin
+    date_resolved = (
+        datetime.now(timezone.utc).strftime("%Y%m%d") if def_date == "now" else def_date
+    )
+    assets_bin = (
+        os.path.join(cfg_dir, s.security.prowler_bin)
+        if cfg_dir
+        else s.security.prowler_bin
+    )
     return {
         "author": s.metadata.author or "Iñaki Marín",
         "report_date": date_resolved,
         "out_base": s.reports.out_base or s.output.base_dir or "reports",
         "projects": s.catalog.projects,
         "org_id": s.org.org_id,
-        "formats": s.reports.formats or ["md","json","csv"],
+        "formats": s.reports.formats or ["md", "json", "csv"],
         "sa_key": s.credentials.sa_key_path,
         "prowler_bin": assets_bin,
         "api_url": s.security.api_url,

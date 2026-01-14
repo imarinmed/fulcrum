@@ -1,12 +1,13 @@
 import subprocess
-import json
 import structlog
-from typing import List, Dict, Any, Optional
+from typing import List, Optional
 
 log = structlog.get_logger()
 
+
 class ProwlerUnavailable(Exception):
     pass
+
 
 def list_checks(provider: str = "gcp") -> List[str]:
     """List available prowler checks for a provider."""
@@ -16,24 +17,24 @@ def list_checks(provider: str = "gcp") -> List[str]:
         prowler_cmd = "prowler"
         # If running in environment where prowler is in ~/.local/bin
         import os
+
         if os.path.exists(os.path.expanduser("~/.local/bin/prowler")):
             prowler_cmd = os.path.expanduser("~/.local/bin/prowler")
-            
+
         cmd = [prowler_cmd, provider, "--list-checks"]
         res = subprocess.run(cmd, capture_output=True, text=True)
         if res.returncode != 0:
             raise ProwlerUnavailable(f"Prowler list failed: {res.stderr}")
-        
+
         # Output is text, we need to parse. Or just trust user to know checks.
         # This is just a helper.
         return res.stdout.splitlines()
     except FileNotFoundError:
         raise ProwlerUnavailable("Prowler executable not found.")
 
+
 def run_scan(
-    project_id: str, 
-    checks: Optional[List[str]] = None, 
-    output_format: str = "json"
+    project_id: str, checks: Optional[List[str]] = None, output_format: str = "json"
 ) -> str:
     """
     Run prowler scan on a GCP project.
@@ -41,15 +42,16 @@ def run_scan(
     """
     prowler_cmd = "prowler"
     import os
+
     if os.path.exists(os.path.expanduser("~/.local/bin/prowler")):
         prowler_cmd = os.path.expanduser("~/.local/bin/prowler")
 
     # prowler gcp --project-ids PROJECT --checks ...
     cmd = [prowler_cmd, "gcp", "--project-ids", project_id]
-    
+
     if checks:
         cmd.extend(["--checks"] + checks)
-    
+
     # We want to output to a specific file/format
     # Prowler writes to output directory by default.
     # We can control output directory.

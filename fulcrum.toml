@@ -25,6 +25,9 @@ cadence = "weekly"
 author = "Iñaki Marín"
 version = "fulcrum 0.1.0"
 
+[decommission]
+bucket_whitelist = []
+
 [reports]
 out_base = "reports"
 formats = ["md", "json", "csv"]

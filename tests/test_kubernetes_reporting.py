@@ -1,8 +1,8 @@
 import os
 import sys
 
+
 def test_kubernetes_section_in_report(tmp_path, monkeypatch):
-    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
     from src.core.reporting import generate_standard_report
     import src.core.reporting as rep
 
@@ -29,7 +29,9 @@ def test_kubernetes_section_in_report(tmp_path, monkeypatch):
         }
 
     monkeypatch.setattr(rep, "collect_all", fake_collect_all)
-    res = generate_standard_report(str(tmp_path / "reports"), "Tester", report_date="20250101")
+    res = generate_standard_report(
+        str(tmp_path / "reports"), "Tester", report_date="20250101"
+    )
     k_path = os.path.join(res["report_dir"], "projects", "kubernetes.md")
     assert os.path.exists(k_path)
     with open(k_path) as f:
