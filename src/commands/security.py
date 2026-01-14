@@ -142,8 +142,10 @@ def security_audit(
     """Audit local files for secrets and sensitive data."""
     setup_logging()
 
-    auditor = SecurityAuditor()
-    findings = auditor.audit(paths)
+    # Use first path as root for scanning (multi-path support can be added)
+    root_path = paths[0] if len(paths) == 1 else paths
+    auditor = SecurityAuditor(root_path=root_path)
+    findings = auditor.scan()
 
     if not findings:
         console.print("[green]No security issues found[/]")
@@ -159,8 +161,8 @@ def security_audit(
         table.add_row(
             finding.get("file", "unknown"),
             str(finding.get("line", "?")),
-            finding.get("type", "secret"),
-            finding.get("description", "")[:50],
+            finding.get("rule", "secret"),
+            finding.get("match_snippet", "")[:50],
         )
 
     console.print(table)
