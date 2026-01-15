@@ -17,12 +17,22 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any, Callable
 from enum import Enum
 
+import structlog
+
 from textual.app import App, ComposeResult
-from textual.widgets import Header, Footer, DataTable, Static, LoadingIndicator
-from textual.containers import Container
+from textual.widgets import (
+    Header,
+    Footer,
+    DataTable,
+    Static,
+    LoadingIndicator,
+)
 from textual.reactive import reactive
 import structlog
 
+log = structlog.get_logger()
+
+# Initialize structured logging
 log = structlog.get_logger()
 
 
