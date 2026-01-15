@@ -1,5 +1,6 @@
 from typing import Any, List, Optional
 
+
 def escape(text: str) -> str:
     if text is None:
         return ""
@@ -14,16 +15,20 @@ def escape(text: str) -> str:
     s = s.replace("\n", "<br/>")
     return s
 
+
 def header(level: int, text: str) -> str:
     level = max(1, min(6, level))
     return f"{'#' * level} {escape(text)}\n\n"
 
+
 def link(text: str, target: str) -> str:
     return f"[{escape(text)}]({target})"
+
 
 def code_block(language: Optional[str], content: str) -> str:
     lang = language or ""
     return f"```{lang}\n{content}\n```\n\n"
+
 
 def _format_alignment(alignments: Optional[List[str]], cols: int) -> List[str]:
     if not alignments:
@@ -35,7 +40,10 @@ def _format_alignment(alignments: Optional[List[str]], cols: int) -> List[str]:
         out.append(mapping.get(a, ":---"))
     return out
 
-def table(headers: List[str], rows: List[List[Any]], alignments: Optional[List[str]] = None) -> str:
+
+def table(
+    headers: List[str], rows: List[List[Any]], alignments: Optional[List[str]] = None
+) -> str:
     esc_headers = [escape(h) for h in headers]
     cols = len(esc_headers)
     sep = _format_alignment(alignments, cols)
@@ -46,6 +54,7 @@ def table(headers: List[str], rows: List[List[Any]], alignments: Optional[List[s
         cells = [escape(r[i]) if i < len(r) else "" for i in range(cols)]
         body_lines.append("| " + " | ".join(cells) + " |")
     return h + s + "\n".join(body_lines) + ("\n" if body_lines else "")
+
 
 def format_number(value: Any, kind: str = "count") -> str:
     try:
@@ -65,6 +74,6 @@ def format_number(value: Any, kind: str = "count") -> str:
             return f"$${n:,.2f}"
         n = float(value)
         return f"{int(n):,}"
-    except Exception:
+    except (ValueError, TypeError) as e:
+        log.debug("markdown.format_error", value=value, kind=kind, error=str(e))
         return str(value)
-

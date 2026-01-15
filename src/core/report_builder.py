@@ -87,7 +87,13 @@ class ReportStrategy(ABC):
                             parent = candidate
                             break
                         suffix += 1
-            except Exception:
+            except OSError as e:
+                log.warning(
+                    "report_builder.scandir_error",
+                    path=parent,
+                    error=str(e),
+                    security_event=True
+                )
                 suffix = 2
                 while True:
                     candidate = f"{parent}-{suffix:02d}"

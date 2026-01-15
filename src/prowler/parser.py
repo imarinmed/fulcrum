@@ -2,8 +2,11 @@ import os
 import json
 import csv
 from typing import Dict, List, Tuple
+import structlog
 
 from .models import RawProwlerFinding
+
+log = structlog.get_logger()
 
 
 def load_json(path: str) -> List[RawProwlerFinding]:
@@ -21,7 +24,10 @@ def load_json(path: str) -> List[RawProwlerFinding]:
     with open(path, "r") as f:
         try:
             data = json.load(f)
-        except Exception:
+        except json.JSONDecodeError as e:
+            log.warning(
+                "prowler.json_parse_error", path=path, error=str(e), security_event=True
+            )
             return []
     if isinstance(data, list):
         return [RawProwlerFinding(**item) for item in data]
@@ -46,7 +52,10 @@ def load_csv(path: str) -> List[RawProwlerFinding]:
         try:
             reader = csv.DictReader(f)
             return [RawProwlerFinding(**row) for row in reader]
-        except Exception:
+        except (csv.Error, TypeError, ValueError) as e:
+            log.warning(
+                "prowler.csv_parse_error", path=path, error=str(e), security_event=True
+            )
             return []
 
 

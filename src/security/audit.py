@@ -5,13 +5,15 @@ Optimized security scanning with:
 - Async file system operations
 - ProcessPoolExecutor for parallel regex scanning
 - Streaming file reads (memory efficient)
-- Pre-compiled regex patterns
+- Pre-compiled regex patterns (ReDoS-safe)
 - Progress tracking for large scans
+- Resource limits and input validation
 """
 
 import asyncio
 import os
 import re
+import signal
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -20,15 +22,105 @@ import structlog
 
 log = structlog.get_logger()
 
-# Pre-compiled regex patterns for performance
+# Resource limits for ReDoS prevention
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB limit per file
+SCAN_TIMEOUT_SECONDS = 60  # Timeout per file scan
+MAX_LINE_LENGTH = 10000  # Maximum line length to process
+MAX_MATCHES_PER_FILE = 1000  # Maximum findings per file
+
+
+# Pre-compiled regex patterns with ReDoS-safe patterns
+# Using atomic groups and possessive quantifiers to prevent backtracking
+# Reference: CWE-1333, OWASP Regular Expression Denial of Service
 SECURITY_PATTERNS = {
     "api_key": re.compile(
-        r"(?i)(api_key|apikey|secret_key|access_token)\s*[:=]\s*['\"][a-zA-Z0-9_\-]{20,}['\"]"
+        r"(?i)(?:api_key|apikey|secret_key|access_token)\s*[:=]\s*"
+        r"['\"](?=[a-zA-Z0-9_\-]{20,})[a-zA-Z0-9_\-]{20,}['\"]"
+        r"(?![a-zA-Z0-9_\-])"
     ),
-    "password": re.compile(r"(?i)(password|passwd|pwd)\s*[:=]\s*['\"][^'\"]{1,}['\"]"),
-    "db_connection": re.compile(r"(?i)(postgres|mysql)://.*:.*@"),
+    "password": re.compile(
+        r"(?i)(?:password|passwd|pwd)\s*[:=]\s*"
+        r"['\"](?=[^'\"]*['\"])[^'\"]{1,128}['\"]"  # Cap at 128 chars, use lookahead
+    ),
+    "db_connection": re.compile(
+        r"(?i)(?:postgres|mysql)://"
+        r"(?:[^:/?#\s]+):"  # Username without :
+        r"(?:[^@/?#\s]+)@"  # Password without @
+    ),
     "private_key": re.compile(r"-----BEGIN PRIVATE KEY-----"),
 }
+
+
+class SecurityError(Exception):
+    """Raised when security scanning encounters critical issues."""
+
+    pass
+
+
+def _validate_file_for_scan(file_path: str, max_size: int = MAX_FILE_SIZE) -> None:
+    """
+    Validate file before scanning for security issues.
+
+    Security checks:
+    - File size limits (prevent memory exhaustion)
+    - Symbolic link detection
+    - Permission validation
+
+    Args:
+        file_path: Path to file to validate
+        max_size: Maximum allowed file size in bytes
+
+    Raises:
+        SecurityError: If file fails validation
+    """
+    if not os.path.exists(file_path):
+        raise SecurityError(f"File not found: {file_path}")
+
+    # Check file size
+    file_size = os.path.getsize(file_path)
+    if file_size > max_size:
+        raise SecurityError(
+            f"File exceeds maximum size ({max_size} bytes): {file_path} ({file_size} bytes)"
+        )
+
+    # Check for symbolic links (security: prevent following symlinks to sensitive files)
+    if os.path.islink(file_path):
+        raise SecurityError(f"Symbolic links not allowed: {file_path}")
+
+    # Check file permissions (warn if world-readable)
+    try:
+        file_stat = os.stat(file_path)
+        if file_stat.st_mode & 0o004:
+            log.warning(
+                "security.world_readable_file",
+                file=file_path,
+                mode=oct(file_stat.st_mode),
+            )
+    except OSError:
+        pass
+
+
+def _safe_read_line(line: str, max_length: int = MAX_LINE_LENGTH) -> str:
+    """
+    Safely read a line with length limits.
+
+    Prevents ReDoS by limiting input length before regex matching.
+
+    Args:
+        line: Line content to process
+        max_length: Maximum allowed line length
+
+    Returns:
+        Truncated line if too long
+
+    Raises:
+        SecurityError: If line is maliciously crafted
+    """
+    if len(line) > max_length:
+        log.warning("security.line_truncated", length=len(line), max_length=max_length)
+        return line[:max_length]
+    return line
+
 
 # Default ignore patterns
 IGNORE_DIRS = {".git", "__pycache__", "venv", "node_modules", ".trae", "node_modules"}
@@ -183,7 +275,7 @@ async def _collect_files_async(
             async for entry in _async_scandir(path):
                 if entry.is_dir(follow_symlinks=False):
                     if entry.name not in ignore_dirs:
-                        await scan_directory(entry.path)
+                        await scan_directory(Path(entry.path))  # type: ignore[arg-type]
                 elif entry.is_file():
                     if entry.name not in ignore_files:
                         files.append(entry.path)

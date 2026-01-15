@@ -52,7 +52,8 @@ def _get_cli_defaults():
     """Get CLI defaults with fallback values."""
     try:
         return get_cli_defaults()
-    except Exception:
+    except Exception as e:
+        log.warning("report.cli_defaults_error", error=str(e), security_event=True)
         return {
             "out_dir": "master-report",
             "summary_path": None,
@@ -326,7 +327,8 @@ def validate_report_cmd(
                     if len(tok) == 8 and tok.isdigit():
                         return tok
                     return ""
-                except Exception:
+                except (ValueError, AttributeError) as e:
+                    log.debug("report.date_token_error", name=name, error=str(e))
                     return ""
 
             dated = [(n, _to_date_token(n)) for n in candidates]
