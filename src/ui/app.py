@@ -17,6 +17,8 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any, Callable
 from enum import Enum
 
+import structlog
+
 from textual.app import App, ComposeResult
 from textual.widgets import (
     Header,
@@ -24,9 +26,11 @@ from textual.widgets import (
     DataTable,
     Static,
     LoadingIndicator,
-    Container,
 )
 from textual.reactive import reactive
+
+# Initialize structured logging
+log = structlog.get_logger()
 
 
 class ViewState(Enum):
