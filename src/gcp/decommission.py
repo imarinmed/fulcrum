@@ -98,7 +98,9 @@ class Decommissioner:
                     name = b.get("name")  # fallback
 
                 action = "DELETE"
-                if any(w in name for w in self.bucket_whitelist):
+                # Use exact match for safety to prevent substring collisions
+                # e.g. whitelist=["prod"] should not protect "non-prod"
+                if name in self.bucket_whitelist:
                     action = "PRESERVE"
 
                 report["buckets"].append({"name": name, "action": action})
