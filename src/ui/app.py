@@ -28,6 +28,9 @@ from textual.widgets import (
     LoadingIndicator,
 )
 from textual.reactive import reactive
+import structlog
+
+log = structlog.get_logger()
 
 # Initialize structured logging
 log = structlog.get_logger()
@@ -177,6 +180,10 @@ class Dashboard(App):
     LoadingIndicator {
         dock: bottom;
     }
+    .security-panel {
+        height: 100%;
+        width: 100%;
+    }
     """
 
     current_view: reactive[ViewState] = reactive(ViewState.COMPUTE)
@@ -190,11 +197,14 @@ class Dashboard(App):
         self.store.register_callback(self._on_store_change)
         self._notification: Optional[Static] = None
         self._executive_task: Optional[asyncio.Task] = None
+        self._security_store = None
+        self._security_panels = None
 
     def compose(self) -> ComposeResult:
         yield Header()
         yield Static("Fulcrum Dashboard", id="title")
         yield DataTable(id="data_table")
+        yield Container(id="security_container", classes="security-panel")
         yield Footer()
         yield LoadingIndicator(id="loading")
 
@@ -206,7 +216,11 @@ class Dashboard(App):
 
     def _on_store_change(self) -> None:
         """Handle data store changes."""
-        self._update_table(self.current_view)
+        if self.current_view == ViewState.SECURITY:
+            if self._security_panels:
+                self._security_panels.refresh_current_panel()
+        else:
+            self._update_table(self.current_view)
 
     def _set_loading(self, loading: bool, message: str = "") -> None:
         """Set loading state."""
@@ -223,8 +237,11 @@ class Dashboard(App):
         help_text = (
             "Press keys to switch views:\n"
             "  [b]c[/] - Compute | [b]s[/] - Storage | [b]n[/] - Networking\n"
-            "  [b]k[/] - Kubernetes | [b]e[/] - Executive Report\n"
-            "  [b]?[/] - Show this help"
+            "  [b]k[/] - Kubernetes | [b]y[/] - Security Dashboard\n"
+            "  [b]e[/] - Executive Report | [b]?[/] - Show this help\n\n"
+            "[b]Security Dashboard Keys:[/]\n"
+            "  [b]o[/] - Overview | [b]f[/] - Findings | [b]m[/] - Compliance\n"
+            "  [b]r[/] - Remediation | [b]t[/] - Trends"
         )
         self.mount(Static(help_text, id="help"))
 
@@ -327,17 +344,15 @@ class Dashboard(App):
         key = getattr(event, "key", "").lower()
 
         if key == "c":
-            self.current_view = ViewState.COMPUTE
-            self._update_table(ViewState.COMPUTE)
+            self._switch_to_view(ViewState.COMPUTE)
         elif key == "s":
-            self.current_view = ViewState.STORAGE
-            self._update_table(ViewState.STORAGE)
+            self._switch_to_view(ViewState.STORAGE)
         elif key == "n":
-            self.current_view = ViewState.NETWORKING
-            self._update_table(ViewState.NETWORKING)
+            self._switch_to_view(ViewState.NETWORKING)
         elif key == "k":
-            self.current_view = ViewState.KUBERNETES
-            self._update_table(ViewState.KUBERNETES)
+            self._switch_to_view(ViewState.KUBERNETES)
+        elif key == "y":
+            self._switch_to_view(ViewState.SECURITY)
         elif key == "e":
             # Check if already running
             if self._executive_task and not self._executive_task.done():
@@ -353,11 +368,59 @@ class Dashboard(App):
         elif key == "?":
             self._show_help()
             return
+        elif key == "o" and self.current_view == ViewState.SECURITY:
+            from .security.panels import SecurityView
+
+            self._security_panels.switch_view(SecurityView.OVERVIEW)
+        elif key == "f" and self.current_view == ViewState.SECURITY:
+            from .security.panels import SecurityView
+
+            self._security_panels.switch_view(SecurityView.FINDINGS)
+        elif key == "m" and self.current_view == ViewState.SECURITY:
+            from .security.panels import SecurityView
+
+            self._security_panels.switch_view(SecurityView.COMPLIANCE)
+        elif key == "r" and self.current_view == ViewState.SECURITY:
+            from .security.panels import SecurityView
+
+            self._security_panels.switch_view(SecurityView.REMEDIATION)
+        elif key == "t" and self.current_view == ViewState.SECURITY:
+            from .security.panels import SecurityView
+
+            self._security_panels.switch_view(SecurityView.TRENDS)
 
         # Remove help text on first navigation
         help_widget = self.query_one("#help", Static)
         if help_widget:
             help_widget.remove()
+
+    def _switch_to_view(self, view: ViewState) -> None:
+        """Switch to a different view."""
+        self.current_view = view
+
+        if view == ViewState.SECURITY:
+            # Hide data table, show security panel
+            table = self.query_one(DataTable)
+            table.display = False
+
+            # Create and show security panels
+            from .security.store import SecurityStore
+            from .security.panels import SecurityPanels, SecurityView
+
+            self._security_store = SecurityStore(self.out_dir)
+            self._security_panels = SecurityPanels(self._security_store)
+
+            container = self.query_one("#security_container", Container)
+            container.mount(self._security_panels)
+        else:
+            # Hide security panel, show data table
+            container = self.query_one("#security_container", Container)
+            container.remove_children()
+            container.display = False
+
+            table = self.query_one(DataTable)
+            table.display = True
+            self._update_table(view)
 
 
 def launch(out_dir: str) -> None:
