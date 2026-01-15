@@ -34,7 +34,7 @@ dev = [
 ]
 
 [project.scripts]
-fulcrum = "src.cli:main"
+fulcrum = "fulcrum.cli:main"
 
 [tool.pytest.ini_options]
 addopts = "-q"
@@ -50,6 +50,15 @@ strict = true
 requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools.packages.find]
-where = ["src"]
-include = ["*"]
+[tool.setuptools]
+packages = [
+    "fulcrum",
+    "fulcrum.commands",
+    "fulcrum.core",
+    "fulcrum.gcp",
+    "fulcrum.prowler",
+    "fulcrum.security",
+    "fulcrum.ui",
+    "fulcrum.ui.security"
+]
+package-dir = {"fulcrum" = "src"}

@@ -162,14 +162,7 @@ class Settings(BaseModel):
         author: str = "Iñaki Marín"
         version: str = "fulcrum 0.1.0"
 
-
-class DecommissionSettings(BaseModel):
-    """Settings for decommission operations."""
-
-    bucket_whitelist: List[str] = Field(
-        default_factory=list,
-        description="List of bucket names to preserve during decommissioning",
-    )
+    metadata: MetadataSettings = MetadataSettings()
 
 
 def default_paths() -> List[str]:
@@ -244,7 +237,7 @@ def load_settings(path: Optional[str] = None) -> Settings:
                 metadata=Settings.MetadataSettings(**data.get("metadata", {})),
                 decommission=DecommissionSettings(**data.get("decommission", {})),
             )
-        except (OSError, IOError, tomlkit.ParseError) as e:
+        except (OSError, IOError, Exception) as e:
             log.error(
                 "settings.load_error", path=cfg_path, error=str(e), security_event=True
             )

@@ -20,6 +20,7 @@ from enum import Enum
 import structlog
 
 from textual.app import App, ComposeResult
+from textual.containers import Container
 from textual.widgets import (
     Header,
     Footer,
