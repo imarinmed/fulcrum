@@ -3,6 +3,7 @@ import re
 import json
 from typing import List
 
+
 def _required_pages() -> List[str]:
     return [
         "compute.md",
@@ -15,6 +16,7 @@ def _required_pages() -> List[str]:
         "storage.md",
         "buckets.md",
     ]
+
 
 def validate_structure(report_dir: str) -> List[str]:
     issues: List[str] = []
@@ -34,6 +36,7 @@ def validate_structure(report_dir: str) -> List[str]:
             issues.append(f"missing {fn}")
     return issues
 
+
 def validate_tables(path: str) -> List[str]:
     issues: List[str] = []
     if not os.path.isfile(path):
@@ -52,6 +55,7 @@ def validate_tables(path: str) -> List[str]:
                 issues.append(f"row column count mismatch in {os.path.basename(path)}")
     return issues
 
+
 def validate_headers(path: str) -> List[str]:
     issues: List[str] = []
     if not os.path.isfile(path):
@@ -62,6 +66,7 @@ def validate_headers(path: str) -> List[str]:
     if not has_h2:
         issues.append(f"missing H2 header in {os.path.basename(path)}")
     return issues
+
 
 def validate_links(report_dir: str) -> List[str]:
     issues: List[str] = []
@@ -76,6 +81,7 @@ def validate_links(report_dir: str) -> List[str]:
             issues.append(f"broken link: {m.group(1)}")
     return issues
 
+
 def validate_metadata(report_dir: str) -> List[str]:
     issues: List[str] = []
     path = os.path.join(report_dir, "metadata.json")
@@ -87,9 +93,10 @@ def validate_metadata(report_dir: str) -> List[str]:
         ts = meta.get("generated_at", "")
         if not re.match(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z$", ts):
             issues.append("invalid generated_at timestamp")
-    except Exception:
-        issues.append("metadata.json unreadable")
+    except (json.JSONDecodeError, OSError, IOError) as e:
+        issues.append(f"metadata.json unreadable: {str(e)}")
     return issues
+
 
 def validate_report(report_dir: str) -> List[str]:
     issues = []
@@ -101,7 +108,10 @@ def validate_report(report_dir: str) -> List[str]:
         issues += validate_headers(p)
     # Security page should include Prowler section if prowler data exists
     data_dir = os.path.join(report_dir, "data")
-    if os.path.isdir(data_dir) and (os.path.isfile(os.path.join(data_dir, "prowler.json")) or os.path.isfile(os.path.join(data_dir, "prowler.csv"))):
+    if os.path.isdir(data_dir) and (
+        os.path.isfile(os.path.join(data_dir, "prowler.json"))
+        or os.path.isfile(os.path.join(data_dir, "prowler.csv"))
+    ):
         sec = os.path.join(proj, "security.md")
         if os.path.isfile(sec):
             with open(sec, "r") as f:

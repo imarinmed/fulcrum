@@ -120,7 +120,13 @@ def ensure_report_dir(
         try:
             if any(True for _ in os.scandir(parent)):
                 parent = _resolve_duplicate_dir(parent)
-        except Exception:
+        except OSError as e:
+            log.warning(
+                "reporting.scandir_error",
+                path=parent,
+                error=str(e),
+                security_event=True,
+            )
             parent = _resolve_duplicate_dir(parent)
     os.makedirs(parent, exist_ok=True)
     os.makedirs(os.path.join(parent, "projects"), exist_ok=True)

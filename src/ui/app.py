@@ -6,6 +6,7 @@ Features:
 - Async operations without blocking the UI
 - Data caching for instant view switches
 - Proper error notifications
+- Security dashboard with findings, compliance, and remediation
 """
 
 import asyncio
@@ -17,7 +18,14 @@ from typing import Dict, List, Optional, Any, Callable
 from enum import Enum
 
 from textual.app import App, ComposeResult
-from textual.widgets import Header, Footer, DataTable, Static, LoadingIndicator
+from textual.widgets import (
+    Header,
+    Footer,
+    DataTable,
+    Static,
+    LoadingIndicator,
+    Container,
+)
 from textual.reactive import reactive
 
 
@@ -67,8 +75,8 @@ class DataStore:
         for callback in self._callbacks:
             try:
                 callback()
-            except Exception:
-                pass
+            except Exception as e:
+                log.warning("ui.callback_error", error=str(e), security_event=True)
 
     def get_csv_path(self, view: ViewState) -> str:
         """Get the CSV file path for a given view."""

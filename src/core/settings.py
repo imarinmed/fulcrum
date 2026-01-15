@@ -1,7 +1,78 @@
-from typing import List, Optional
 import os
+from pathlib import Path
+from typing import List, Optional
 from pydantic import BaseModel, Field
 import tomlkit
+import structlog
+
+log = structlog.get_logger()
+
+
+class SecurityError(Exception):
+    """Raised when security checks fail."""
+
+    pass
+
+
+# Allowed config file locations (for path traversal prevention)
+ALLOWED_CONFIG_DIRS = [
+    Path.cwd(),
+    Path.home() / ".config" / "fulcrum",
+    Path("/etc/fulcrum"),
+]
+
+
+def _is_path_safe(requested_path: Path, allowed_dirs: List[Path]) -> bool:
+    """
+    Check if a path is within allowed directories.
+
+    Args:
+        requested_path: Path to validate
+        allowed_dirs: List of allowed base directories
+
+    Returns:
+        True if path is safe, False otherwise
+    """
+    try:
+        resolved = requested_path.resolve()
+        for allowed in allowed_dirs:
+            allowed_resolved = allowed.resolve()
+            # Check if resolved path starts with allowed directory
+            try:
+                resolved.relative_to(allowed_resolved)
+                return True
+            except ValueError:
+                continue
+        return False
+    except (OSError, ValueError):
+        return False
+
+
+def safe_resolve_config(path: Optional[str]) -> Optional[Path]:
+    """
+    Resolve config path with security validation.
+
+    Args:
+        path: Requested config path or None
+
+    Returns:
+        Resolved Path if safe, None otherwise
+    """
+    if not path:
+        return None
+
+    requested = Path(path)
+
+    if not _is_path_safe(requested, ALLOWED_CONFIG_DIRS):
+        log.error(
+            "settings.path_traversal_attempt", path=str(requested), security_event=True
+        )
+        raise SecurityError(
+            f"Config path outside allowed directories: {path}. "
+            f"Allowed directories: {[str(d) for d in ALLOWED_CONFIG_DIRS]}"
+        )
+
+    return requested
 
 
 class OrgSettings(BaseModel):
@@ -111,32 +182,73 @@ def default_paths() -> List[str]:
 
 
 def locate_config(explicit: Optional[str] = None) -> Optional[str]:
-    candidates = [explicit] if explicit else default_paths()
-    for p in candidates:
-        if p and os.path.exists(p):
-            return p
-    return explicit or candidates[0]
+    """Locate config file with path traversal protection.
+
+    Args:
+        explicit: Explicit config path if provided
+
+    Returns:
+        Config path or None if not found
+    """
+    try:
+        # If explicit path provided, validate it
+        if explicit:
+            safe_path = safe_resolve_config(explicit)
+            if safe_path and os.path.exists(safe_path):
+                return str(safe_path)
+            else:
+                return None
+
+        # Check default paths
+        for p in default_paths():
+            safe_path = safe_resolve_config(p)
+            if safe_path and os.path.exists(safe_path):
+                return str(safe_path)
+
+        return None
+    except SecurityError as e:
+        log.error(
+            "settings.config_path_rejected",
+            path=explicit,
+            error=str(e),
+            security_event=True,
+        )
+        return None
 
 
 def load_settings(path: Optional[str] = None) -> Settings:
+    """Load settings with security validation.
+
+    Args:
+        path: Optional explicit config path
+
+    Returns:
+        Settings object
+    """
     cfg_path = locate_config(path)
     if cfg_path and os.path.exists(cfg_path):
-        with open(cfg_path, "r") as f:
-            data = tomlkit.parse(f.read())
-        return Settings(
-            org=OrgSettings(**data.get("org", {})),
-            catalog=CatalogSettings(**data.get("catalog", {})),
-            billing=BillingSettings(**data.get("billing", {})),
-            labels=LabelsSettings(**data.get("labels", {})),
-            redaction=RedactionSettings(**data.get("redaction", {})),
-            refresh=RefreshSettings(**data.get("refresh", {})),
-            credentials=Settings.CredentialsSettings(**data.get("credentials", {})),
-            security=Settings.SecuritySettings(**data.get("security", {})),
-            reports=Settings.ReportsSettings(**data.get("reports", {})),
-            output=Settings.OutputSettings(**data.get("output", {})),
-            metadata=Settings.MetadataSettings(**data.get("metadata", {})),
-            decommission=DecommissionSettings(**data.get("decommission", {})),
-        )
+        try:
+            with open(cfg_path, "r") as f:
+                data = tomlkit.parse(f.read())
+            return Settings(
+                org=OrgSettings(**data.get("org", {})),
+                catalog=CatalogSettings(**data.get("catalog", {})),
+                billing=BillingSettings(**data.get("billing", {})),
+                labels=LabelsSettings(**data.get("labels", {})),
+                redaction=RedactionSettings(**data.get("redaction", {})),
+                refresh=RefreshSettings(**data.get("refresh", {})),
+                credentials=Settings.CredentialsSettings(**data.get("credentials", {})),
+                security=Settings.SecuritySettings(**data.get("security", {})),
+                reports=Settings.ReportsSettings(**data.get("reports", {})),
+                output=Settings.OutputSettings(**data.get("output", {})),
+                metadata=Settings.MetadataSettings(**data.get("metadata", {})),
+                decommission=DecommissionSettings(**data.get("decommission", {})),
+            )
+        except (OSError, IOError, tomlkit.ParseError) as e:
+            log.error(
+                "settings.load_error", path=cfg_path, error=str(e), security_event=True
+            )
+            return Settings()
     return Settings()
 
 
