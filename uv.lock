@@ -292,6 +292,7 @@ dependencies = [
     { name = "proto-plus" },
     { name = "protobuf" },
 ]
+sdist = { url = "https://files.pythonhosted.org/packages/49/f7/4947a4a0423e43167b4397bf4a9ef84d3aa64a2af38343314c5c70d8d0bd/google_cloud_compute-1.41.0.tar.gz", hash = "sha256:8cd07f053c3bf910e8abe2fbeffa6f665f105eb9be8716ee85484e6e0a08314b", size = 4675744, upload-time = "2026-01-15T13:15:46.085Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/5f/85/30f1379edd6948458f575e25a6fb2e08bb25e96913990c6cc5e399e32999/google_cloud_compute-1.41.0-py3-none-any.whl", hash = "sha256:ca5266b8dc707736aca0da48b39a94fe10b202d81c6290e8b464d0a63af0fd2e", size = 3530551, upload-time = "2026-01-09T14:53:51.356Z" },
 ]
@@ -307,6 +308,7 @@ dependencies = [
     { name = "proto-plus" },
     { name = "protobuf" },
 ]
+sdist = { url = "https://files.pythonhosted.org/packages/00/6e/0eee176b31231b8c18d51c19dbb1b0609ae394a85895e23967657904c2ff/google_cloud_container-2.62.0.tar.gz", hash = "sha256:3bae3b270deff640f53e7d2768fbc03ffbf3531a886560fb9e4f7b55146cd53f", size = 384247, upload-time = "2026-01-15T13:14:10.367Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/5b/26/874ee96c73b868a3dec11f1a9076996b004cffbb241c78061b2dd4f81e62/google_cloud_container-2.62.0-py3-none-any.whl", hash = "sha256:cd363a3949393770a8cc83524524eb2bbcb386f28ed70988ef5c268683589b65", size = 329593, upload-time = "2026-01-09T14:53:59.021Z" },
 ]
@@ -689,11 +691,11 @@ wheels = [
 
 [[package]]
 name = "pyasn1"
-version = "0.6.1"
+version = "0.6.2"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/ba/e9/01f1a64245b89f039897cb0130016d79f77d52669aae6ee7b159a6c4c018/pyasn1-0.6.1.tar.gz", hash = "sha256:6f580d2bdd84365380830acf45550f2511469f673cb4a5ae3857a3170128b034", size = 145322, upload-time = "2024-09-10T22:41:42.55Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/fe/b6/6e630dff89739fcd427e3f72b3d905ce0acb85a45d4ec3e2678718a3487f/pyasn1-0.6.2.tar.gz", hash = "sha256:9b59a2b25ba7e4f8197db7686c09fb33e658b98339fadb826e9512629017833b", size = 146586, upload-time = "2026-01-16T18:04:18.534Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c8/f1/d6a797abb14f6283c0ddff96bbdd46937f64122b8c925cab503dd37f8214/pyasn1-0.6.1-py3-none-any.whl", hash = "sha256:0d632f46f2ba09143da3a8afe9e33fb6f92fa2320ab7e886e2d0f7672af84629", size = 83135, upload-time = "2024-09-11T16:00:36.122Z" },
+    { url = "https://files.pythonhosted.org/packages/44/b5/a96872e5184f354da9c84ae119971a0a4c221fe9b27a4d94bd43f2596727/pyasn1-0.6.2-py3-none-any.whl", hash = "sha256:1eb26d860996a18e9b6ed05e7aae0e9fc21619fcee6af91cca9bad4fbea224bf", size = 83371, upload-time = "2026-01-16T18:04:17.174Z" },
 ]
 
 [[package]]
