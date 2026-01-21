@@ -1,7 +1,7 @@
 import os
 import json
-from src.core.reporting import generate_standard_report
-from src.core.validator import validate_report
+from fulcrum.core.reporting import generate_standard_report
+from fulcrum.core.validator import validate_report
 
 
 def _write_csv(dirpath, name, headers, rows):

@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 
 
 def test_get_cli_defaults_now(tmp_path, monkeypatch):
-    from src.core.settings import (
+    from fulcrum.core.settings import (
         Settings,
         save_settings,
         load_settings,
@@ -24,7 +24,7 @@ def test_get_cli_defaults_now(tmp_path, monkeypatch):
 
 
 def test_preflight_prowler_bin_resolution(tmp_path, monkeypatch):
-    from src.core.settings import (
+    from fulcrum.core.settings import (
         Settings,
         save_settings,
         load_settings,

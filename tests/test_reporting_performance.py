@@ -1,5 +1,5 @@
 import os
-from src.core.reporting import generate_standard_report
+from fulcrum.core.reporting import generate_standard_report
 
 
 def test_large_dataset_generation(tmp_path, monkeypatch):

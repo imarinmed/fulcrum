@@ -1,4 +1,4 @@
-from src.core.collect import collect_project
+from fulcrum.core.collect import collect_project
 
 
 class FakeReq:

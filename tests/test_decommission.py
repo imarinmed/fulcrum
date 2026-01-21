@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from src.gcp.decommission import Decommissioner, SecurityError
-from src.core.settings import DecommissionSettings, Settings
+from fulcrum.gcp.decommission import Decommissioner, SecurityError
+from fulcrum.core.settings import DecommissionSettings, Settings
 
 
 @pytest.fixture

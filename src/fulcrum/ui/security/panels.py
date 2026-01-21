@@ -122,7 +122,7 @@ class OverviewPanel(Container):
 
     def _refresh_data(self) -> None:
         """Refresh all data from store."""
-        self._data = self._store.load_security_data()
+        self._data = self._store._get_security_data_sync()
 
         if not self._data:
             return
@@ -239,7 +239,7 @@ class CompliancePanel(Container):
 
     def _refresh_data(self) -> None:
         """Refresh compliance data."""
-        data = self._store.load_security_data()
+        data = self._store._get_security_data_sync()
 
         if not data:
             return
@@ -351,7 +351,7 @@ class RemediationPanel(Container):
 
     def _refresh_data(self) -> None:
         """Refresh remediation data."""
-        data = self._store.load_security_data()
+        data = self._store._get_security_data_sync()
 
         if not data:
             return
@@ -452,7 +452,7 @@ class TrendsPanel(Container):
 
     def _refresh_data(self) -> None:
         """Refresh trend data."""
-        data = self._store.load_security_data()
+        data = self._store._get_security_data_sync()
 
         if not data:
             return

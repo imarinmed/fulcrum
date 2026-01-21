@@ -1,4 +1,4 @@
-from src.core.markdown import escape, table, header, format_number
+from fulcrum.core.markdown import escape, table, header, format_number
 
 
 def test_escape_specials():

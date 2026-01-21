@@ -1,5 +1,5 @@
 import os
-from src.core.settings import load_settings, save_settings, Settings
+from fulcrum.core.settings import load_settings, save_settings, Settings
 
 
 def test_settings_roundtrip(tmp_path):

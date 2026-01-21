@@ -1,4 +1,4 @@
-from src.prowler.normalize import to_canonical
+from fulcrum.prowler.normalize import to_canonical
 
 
 def test_normalize_basics():

@@ -13,6 +13,7 @@ import json
 import glob
 import os
 import time
+import asyncio
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Callable, Set
@@ -273,8 +274,8 @@ class SecurityStore:
         """Get a port check result file path."""
         return os.path.join(self.out_dir, f"port_{port}_report.json")
 
-    def _load_prowler_findings(self) -> List[SecurityFinding]:
-        """Load findings from Prowler OCSF JSON files."""
+    def _load_prowler_findings_sync(self) -> List[SecurityFinding]:
+        """Load findings from Prowler OCSF JSON files (sync version for thread pool)."""
         findings: List[SecurityFinding] = []
 
         prowler_dir = self.get_prowler_output_dir()
@@ -387,8 +388,13 @@ class SecurityStore:
 
         return findings
 
-    def _load_security_audit_findings(self) -> List[SecurityFinding]:
-        """Load findings from local security audit."""
+    async def _load_prowler_findings(self) -> List[SecurityFinding]:
+        """Load findings from Prowler OCSF JSON files (async wrapper)."""
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, self._load_prowler_findings_sync)
+
+    def _load_security_audit_findings_sync(self) -> List[SecurityFinding]:
+        """Load findings from local security audit (sync version for thread pool)."""
         audit_path = self.get_security_audit_path()
         if not os.path.exists(audit_path):
             return []
@@ -406,6 +412,11 @@ class SecurityStore:
         except (json.JSONDecodeError, IOError) as e:
             log.warning("security.audit_parse_error", file=audit_path, error=str(e))
             return []
+
+    async def _load_security_audit_findings(self) -> List[SecurityFinding]:
+        """Load findings from local security audit (async wrapper)."""
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, self._load_security_audit_findings_sync)
 
     def _compute_security_score(self, findings: List[SecurityFinding]) -> int:
         """Calculate overall security score (0-100)."""
@@ -467,8 +478,8 @@ class SecurityStore:
 
         return scores
 
-    def load_security_data(self, force_refresh: bool = False) -> SecurityData:
-        """Load all security data from available sources."""
+    def _load_security_data_sync(self, force_refresh: bool = False) -> SecurityData:
+        """Load all security data from available sources (sync version for thread pool)."""
         cache_key = "security_data"
 
         # Check cache
@@ -479,8 +490,8 @@ class SecurityStore:
 
         # Load findings from all sources
         findings: List[SecurityFinding] = []
-        findings.extend(self._load_prowler_findings())
-        findings.extend(self._load_security_audit_findings())
+        findings.extend(self._load_prowler_findings_sync())
+        findings.extend(self._load_security_audit_findings_sync())
 
         # Compute statistics
         critical_count = sum(
@@ -541,15 +552,33 @@ class SecurityStore:
 
         return security_data
 
-    def get_filtered_findings(
+    async def load_security_data(self, force_refresh: bool = False) -> SecurityData:
+        """Load all security data from available sources (async)."""
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(
+            None, self._load_security_data_sync, force_refresh
+        )
+
+    def _get_security_data_sync(self) -> SecurityData:
+        """Get security data synchronously (uses cached data if valid)."""
+        return self._load_security_data_sync(force_refresh=False)
+
+    async def get_filtered_findings_async(
         self, filters: Optional[FindingFilters] = None
     ) -> List[SecurityFinding]:
-        """Get findings matching the current or provided filters."""
+        """Get findings matching the current or provided filters (async)."""
         if filters is None:
             filters = self._current_filters
 
-        data = self.load_security_data()
+        data = self._get_security_data_sync()
         return [f for f in data.findings if filters.matches(f)]
+
+    def get_filtered_findings(
+        self, filters: Optional[FindingFilters] = None
+    ) -> List[SecurityFinding]:
+        """Get findings matching the current or provided filters (sync wrapper)."""
+        loop = asyncio.get_event_loop()
+        return loop.run_until_complete(self.get_filtered_findings_async(filters))
 
     def set_filters(self, filters: FindingFilters) -> None:
         """Set active filters and notify listeners."""
@@ -563,32 +592,33 @@ class SecurityStore:
 
     def get_findings_by_severity(self, severity: Severity) -> List[SecurityFinding]:
         """Get all findings of a specific severity."""
-        return [f for f in self.load_security_data().findings if f.severity == severity]
+        data = self._get_security_data_sync()
+        return [f for f in data.findings if f.severity == severity]
 
     def get_findings_by_framework(self, framework: Framework) -> List[SecurityFinding]:
         """Get all findings for a specific framework."""
-        return [
-            f for f in self.load_security_data().findings if f.framework == framework
-        ]
+        data = self._get_security_data_sync()
+        return [f for f in data.findings if f.framework == framework]
 
     def get_findings_by_service(self, service: str) -> List[SecurityFinding]:
         """Get all findings for a specific service."""
-        return [f for f in self.load_security_data().findings if f.service == service]
+        data = self._get_security_data_sync()
+        return [f for f in data.findings if f.service == service]
 
     def get_failing_findings(self) -> List[SecurityFinding]:
         """Get all failing findings."""
-        return [
-            f for f in self.load_security_data().findings if f.status == Status.FAIL
-        ]
+        data = self._get_security_data_sync()
+        return [f for f in data.findings if f.status == Status.FAIL]
 
     def get_auto_fixable_findings(self) -> List[SecurityFinding]:
         """Get findings that have automatic remediation available."""
         fixable_check_ids = {
             "cis_gke_v1_6_0_4_2_4",  # GKE insecure kubelet port
         }
+        data = self._get_security_data_sync()
         return [
             f
-            for f in self.load_security_data().findings
+            for f in data.findings
             if f.check_id in fixable_check_ids and f.status == Status.FAIL
         ]
 
@@ -606,7 +636,7 @@ class SecurityStore:
 
     def get_stats_summary(self) -> Dict[str, Any]:
         """Get a summary of security statistics."""
-        data = self.load_security_data()
+        data = self._get_security_data_sync()
         return {
             "security_score": data.security_score,
             "risk_level": data.risk_level,
@@ -641,7 +671,7 @@ class SecurityStore:
         from datetime import datetime, timezone
 
         findings = self.get_filtered_findings(filters)
-        data = self.load_security_data()
+        data = self._get_security_data_sync()
 
         export_data = {
             "export_timestamp": datetime.now(timezone.utc).isoformat(),
@@ -704,7 +734,7 @@ class SecurityStore:
         from datetime import datetime, timezone
 
         findings = self.get_filtered_findings(filters)
-        data = self.load_security_data()
+        data = self._get_security_data_sync()
 
         # Group findings by severity
         by_severity: Dict[Severity, List[SecurityFinding]] = {}
@@ -779,7 +809,7 @@ class SecurityStore:
         """Export compliance report for specific framework or all frameworks."""
         from datetime import datetime, timezone
 
-        data = self.load_security_data()
+        data = self._get_security_data_sync()
 
         if framework:
             # Single framework report

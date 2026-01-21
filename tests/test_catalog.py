@@ -1,5 +1,5 @@
 import os
-from src.core.catalog import read_csv, validate_csvs
+from fulcrum.core.catalog import read_csv, validate_csvs
 
 
 def test_read_csv_missing(tmp_path):

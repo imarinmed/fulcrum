@@ -1,4 +1,4 @@
-from src.prowler.parser import load_json, load_csv, parse
+from fulcrum.prowler.parser import load_json, load_csv, parse
 
 
 def test_load_json_list(tmp_path):

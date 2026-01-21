@@ -136,6 +136,7 @@ class Settings(BaseModel):
         prowler_bin: str = "assets/prowler/prowler"
         api_url: str = ""
         api_token: str = ""
+        timeout_sec: int = 600
 
     security: SecuritySettings = SecuritySettings()
 
@@ -276,6 +277,7 @@ def save_settings(path: Optional[str], s: Settings) -> str:
     doc["security"]["prowler_bin"] = s.security.prowler_bin
     doc["security"]["api_url"] = s.security.api_url
     doc["security"]["api_token"] = s.security.api_token
+    doc["security"]["timeout_sec"] = s.security.timeout_sec
     doc.add("reports", tomlkit.table())
     doc["reports"]["out_base"] = s.reports.out_base
     doc["reports"]["formats"] = s.reports.formats

@@ -1,4 +1,4 @@
-from src.core.config import merge_config_projects
+from fulcrum.core.config import merge_config_projects
 
 
 def test_merge_projects():

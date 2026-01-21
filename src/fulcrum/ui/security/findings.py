@@ -382,7 +382,7 @@ class FindingsPanel(Container):
 
     def refresh_data(self) -> None:
         """Refresh all data."""
-        self._store.load_security_data()
+        self._store._get_security_data_sync()
         self._refresh_findings()
 
     def set_on_finding_select(

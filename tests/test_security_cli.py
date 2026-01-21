@@ -1,5 +1,5 @@
 from typer.testing import CliRunner
-from src.cli import app
+from fulcrum.cli import app
 
 runner = CliRunner()
 

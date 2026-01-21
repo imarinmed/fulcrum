@@ -1,7 +1,7 @@
 import json
 import os
 
-from src.core.reporting import generate_standard_report
+from fulcrum.core.reporting import generate_standard_report
 
 
 def test_security_outputs_include_all_canonical_fields(tmp_path, monkeypatch):

@@ -14,7 +14,7 @@ def test_generate_used_services_summary(tmp_path):
     ]
     with open(os.path.join(raw_dir, "demo_assets.json"), "w") as f:
         json.dump(assets, f)
-    from src.core.docs import generate_used_services_summary
+    from fulcrum.core.docs import generate_used_services_summary
 
     rel = generate_used_services_summary(out_dir)
     path = os.path.join(out_dir, "executive", rel)

@@ -1,5 +1,5 @@
 from typer.testing import CliRunner
-from src.cli import app
+from fulcrum.cli import app
 
 
 def test_config_init_show(tmp_path):

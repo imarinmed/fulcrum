@@ -1,5 +1,5 @@
 import os
-from src.core.reporting import ensure_report_dir
+from fulcrum.core.reporting import ensure_report_dir
 
 
 def test_ensure_report_dir_default(tmp_path):

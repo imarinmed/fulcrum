@@ -3,7 +3,7 @@ import sys
 
 
 def test_kubernetes_section_in_report(tmp_path, monkeypatch):
-    from src.core.reporting import generate_standard_report
+    from fulcrum.core.reporting import generate_standard_report
     import src.core.reporting as rep
 
     def fake_collect_all(sa_key_path=None):

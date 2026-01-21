@@ -2,11 +2,13 @@
 
 import asyncio
 import os
+import logging
 from typing import List, Optional
 
 import structlog
 import typer
 from rich.console import Console
+from rich.live import Live
 from rich.table import Table
 
 from ..core.logging import setup_logging
@@ -22,6 +24,7 @@ from ..prowler.runner import list_checks, ProwlerUnavailable, run_scan
 from ..prowler.scanner import AsyncScanner
 from ..security.audit import SecurityAuditor
 from ..security.port_checker import check_port
+from ..ui.scan_dashboard import ScanDashboard
 
 console = Console()
 log = structlog.get_logger()
@@ -53,6 +56,9 @@ def security_scan(
     ),
     max_workers: int = typer.Option(
         10, "--max-workers", "-w", help="Maximum parallel workers"
+    ),
+    timeout: Optional[int] = typer.Option(
+        None, "--timeout", "-t", help="Scan timeout in seconds"
     ),
     api: bool = typer.Option(False, "--api", help="Use Prowler API instead of CLI"),
     config: Optional[str] = typer.Option(
@@ -118,11 +124,62 @@ def security_scan(
                 log.error("scan_failed", project=proj, error=str(e))
                 console.print(f"[red]✗ Project {proj} failed: {e}[/]")
     else:
+        # Redirect logs to file to keep UI clean
+        log_file = "security-scan.log"
+        # Force reconfig of basic logging to file
+        for handler in logging.root.handlers[:]:
+            logging.root.removeHandler(handler)
+        logging.basicConfig(filename=log_file, level=logging.INFO, force=True)
+
+        console.print(f"[dim]Detailed logs redirected to {log_file}[/]")
+
+        # Determine timeout: arg > config > default(600)
+        final_timeout = (
+            timeout if timeout is not None else settings.security.timeout_sec
+        )
+
         scanner = AsyncScanner(
             output_dir=output,
             max_concurrency=max_workers,
+            timeout_sec=final_timeout,
         )
-        asyncio.run(scanner.scan_projects(target_projects))
+
+        dashboard = ScanDashboard(target_projects)
+
+        async def run_with_ui():
+            with Live(dashboard.get_renderable(), refresh_per_second=10) as live:
+
+                async def refresh_loop():
+                    """Force dashboard refresh to update timers and progress."""
+                    while True:
+                        live.update(dashboard.get_renderable())
+                        await asyncio.sleep(0.1)
+
+                async def scan_wrapper(pid):
+                    dashboard.update_project(pid, "Scanning")
+                    # No need to manual update here, refresh_loop handles it
+
+                    result = await scanner.scan_project(pid)
+
+                    status = "Done" if result.success else "Error"
+                    if result.error and "Timeout" in str(result.error):
+                        status = "Timeout"
+
+                    dashboard.update_project(pid, status, result=result.success)
+                    return result
+
+                refresh_task = asyncio.create_task(refresh_loop())
+                tasks = [scan_wrapper(p) for p in target_projects]
+                try:
+                    await asyncio.gather(*tasks)
+                finally:
+                    refresh_task.cancel()
+                    try:
+                        await refresh_task
+                    except asyncio.CancelledError:
+                        pass
+
+        asyncio.run(run_with_ui())
 
     console.print(f"\n[green]Security scan complete[/]")
     console.print(f"Output directory: {output}")

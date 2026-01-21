@@ -50,15 +50,5 @@ strict = true
 requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools]
-packages = [
-    "fulcrum",
-    "fulcrum.commands",
-    "fulcrum.core",
-    "fulcrum.gcp",
-    "fulcrum.prowler",
-    "fulcrum.security",
-    "fulcrum.ui",
-    "fulcrum.ui.security"
-]
-package-dir = {"fulcrum" = "src"}
+[tool.setuptools.packages.find]
+where = ["src"]

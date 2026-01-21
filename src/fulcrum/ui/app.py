@@ -108,8 +108,8 @@ class DataStore:
         data = self._cache[path]
         return (time.time() - data.loaded_at) < data.valid_for_seconds
 
-    def load_table_data(self, view: ViewState) -> TableData:
-        """Load table data from CSV file with caching."""
+    def _load_table_data_sync(self, view: ViewState) -> TableData:
+        """Load table data from CSV file with caching (sync version)."""
         path = self.get_csv_path(view)
         import time
 
@@ -141,6 +141,15 @@ class DataStore:
         self._cache[path] = data
         self._notify()
         return data
+
+    def load_table_data(self, view: ViewState) -> TableData:
+        """Load table data from CSV file with caching (sync version for synchronous callers)."""
+        return self._load_table_data_sync(view)
+
+    async def load_table_data_async(self, view: ViewState) -> TableData:
+        """Load table data from CSV file with caching (async version for async callers)."""
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, self._load_table_data_sync, view)
 
     def clear_cache(self) -> None:
         """Clear all cached data."""
@@ -292,6 +301,9 @@ class Dashboard(App):
         try:
             self._set_loading(True, "Generating executive report...")
 
+            # Offload blocking I/O to thread pool
+            loop = asyncio.get_event_loop()
+
             from ..core.settings import load_settings
             from ..core.docs import (
                 generate_project_tables,
@@ -310,19 +322,37 @@ class Dashboard(App):
             version = "1.0.0"
             org_id = s.org.org_id or ""
 
-            # Generate all documentation
-            generate_project_tables(self.out_dir)
-            generate_kubernetes_docs(self.out_dir, author)
-            generate_kubernetes_csv(self.out_dir)
-            generate_asset_summaries(self.out_dir)
-            generate_used_services_summary(self.out_dir)
-            build_index(
-                self.out_dir,
-                author,
-                {},
-                {"summary": "kubernetes/catalog.md"},
-            )
-            write_metadata(self.out_dir, author, version, org_id, s.catalog.projects)
+            # Run all blocking report generation functions in thread pool
+            # Wrap each function call to ensure consistent return type
+            async def run_report_gen():
+                await loop.run_in_executor(None, generate_project_tables, self.out_dir)
+                await loop.run_in_executor(
+                    None, generate_kubernetes_docs, self.out_dir, author
+                )
+                await loop.run_in_executor(None, generate_kubernetes_csv, self.out_dir)
+                await loop.run_in_executor(None, generate_asset_summaries, self.out_dir)
+                await loop.run_in_executor(
+                    None, generate_used_services_summary, self.out_dir
+                )
+                await loop.run_in_executor(
+                    None,
+                    build_index,
+                    self.out_dir,
+                    author,
+                    {},
+                    {"summary": "kubernetes/catalog.md"},
+                )
+                await loop.run_in_executor(
+                    None,
+                    write_metadata,
+                    self.out_dir,
+                    author,
+                    version,
+                    org_id,
+                    s.catalog.projects,
+                )
+
+            await run_report_gen()
 
             self._show_notification(
                 f"Executive report generated: {self.out_dir}",

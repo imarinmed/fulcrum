@@ -1,5 +1,5 @@
 import pytest
-from src.core.remediation import RemediationManager, RemediationAction, RemediationResult
+from fulcrum.core.remediation import RemediationManager, RemediationAction, RemediationResult
 
 class MockAction(RemediationAction):
     @property

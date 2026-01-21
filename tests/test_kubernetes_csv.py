@@ -23,7 +23,7 @@ def test_generate_kubernetes_csv_from_raw(tmp_path):
     ]
     with open(os.path.join(raw_dir, "test_assets.json"), "w") as f:
         json.dump(assets, f)
-    from src.core.docs import generate_kubernetes_csv, read_csv
+    from fulcrum.core.docs import generate_kubernetes_csv, read_csv
 
     path = generate_kubernetes_csv(out_dir)
     assert os.path.exists(path)

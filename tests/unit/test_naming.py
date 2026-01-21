@@ -1,7 +1,7 @@
 import os
 import tempfile
 
-from src.core.reporting import ensure_report_dir
+from fulcrum.core.reporting import ensure_report_dir
 
 
 def test_typed_std_dir_name():
