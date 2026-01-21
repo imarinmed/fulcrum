@@ -1,0 +1,61 @@
+# Fulcrum Configuration
+# Copy this to fulcrum.toml and update with your values
+
+[org]
+org_id = "123456789012"
+
+[catalog]
+projects = ["my-gcp-project-1", "my-gcp-project-2"]
+timeout_sec = 120
+limit_per_project = 1000
+
+[finops]
+# GCP project ID where billing export to BigQuery is configured
+billing_project_id = "my-billing-export-project"
+
+# Billing account ID (found in Cloud Console > Billing)
+billing_account_id = "123456-789012-3456789"
+
+# Default number of days for cost analysis
+default_date_range_days = 30
+
+# Include cost optimization recommendations
+include_recommendations = true
+
+# Include GKE cost analysis
+include_gke_costs = true
+
+# Recommenders to check for optimization opportunities
+recommenders = [
+    "google.compute.instance.MachineTypeRecommender",
+    "google.cloudsql.instance.IdleRecommender",
+    "google.cloudsql.instance.OverprovisionedRecommender",
+    "google.compute.commitment.UsageCommitmentRecommender",
+]
+
+[labels]
+owner = ["owner", "team", "managed_by"]
+cost_center = ["cost_center", "cc", "costcentre"]
+env = ["env", "environment"]
+
+[credentials]
+# Service account key path (relative to config or absolute)
+# sa_key_path = "service-account.json"
+
+# Or use workload identity (no key required)
+# impersonate_service_account = "your-sa@project.iam.gserviceaccount.com"
+
+[reports]
+out_base = "reports"
+formats = ["md", "json", "csv"]
+default_date = "now"
+
+[output]
+base_dir = "master-report"
+csv_dir = "csv"
+access_dir = "access"
+raw_dir = "raw"
+
+[metadata]
+author = "Your Name"
+version = "fulcrum 0.1.0"

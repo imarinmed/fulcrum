@@ -18,7 +18,7 @@ class GCRMigration:
         self.repo_name = repo_name
 
     def audit_gcr_images(
-        self, recursive: bool = False, specific_host: str = None
+        self, recursive: bool = False, specific_host: Optional[str] = None
     ) -> List[str]:
         """List all images in GCR for the project.
         If recursive is True, scans sub-repositories (expensive).
@@ -222,15 +222,15 @@ def migrate_project(
     location: str,
     dry_run: bool = False,
     recursive: bool = False,
-    specific_host: str = None,
+    specific_host: Optional[str] = None,
 ):
     migrator = GCRMigration(project_id, location)
 
-    print(f"--- Migrating {project_id} ---")
+    log.info("ar.migration_start", project_id=project_id, location=location)
 
     # 1. Audit
     images = migrator.audit_gcr_images(recursive=recursive, specific_host=specific_host)
-    print(f"Found {len(images)} images in GCR.")
+    log.info("ar.audit_complete", project_id=project_id, image_count=len(images))
     if not images:
         return []
 
@@ -238,18 +238,18 @@ def migrate_project(
     if not dry_run:
         migrator.ensure_ar_repo()
     else:
-        print(f"[Dry Run] Would create AR repo {migrator.repo_name}")
+        log.info("ar.dry_run_repo", repo=migrator.repo_name)
 
     mapping = []
 
     # 3. Copy
     for img in images:
-        print(f"Processing {img}...")
+        log.info("ar.copy_processing", image=img)
         try:
             new_url = migrator.copy_image(img, dry_run=dry_run)
             mapping.append({"old": img, "new": new_url})
-            print(f"  -> {new_url}")
+            log.info("ar.copy_mapping", source=img, dest=new_url)
         except Exception as e:
-            print(f"  FAILED: {e}")
+            log.error("ar.copy_failed", image=img, error=str(e))
 
     return mapping

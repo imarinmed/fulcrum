@@ -2,6 +2,11 @@ import ast
 import os
 from collections import defaultdict
 
+import structlog
+
+log = structlog.get_logger()
+
+
 def get_imports(file_path):
     with open(file_path, "r") as f:
         try:
@@ -18,6 +23,7 @@ def get_imports(file_path):
                 imports.append(node.module)
     return imports
 
+
 graph = defaultdict(set)
 for root, dirs, files in os.walk("src"):
     for file in files:
@@ -29,6 +35,7 @@ for root, dirs, files in os.walk("src"):
                     if imp.startswith("src."):
                         graph[mod].add(imp)
 
+
 def find_cycle(v, visited, stack):
     visited.add(v)
     stack.append(v)
@@ -37,10 +44,13 @@ def find_cycle(v, visited, stack):
             if find_cycle(neighbor, visited, stack):
                 return True
         elif neighbor in stack:
-            print(f"Cycle detected: {' -> '.join(stack[stack.index(neighbor):])} -> {neighbor}")
+            cycle = " -> ".join(stack[stack.index(neighbor) :])
+            log.info("cycle.detected", path=f"{cycle} -> {neighbor}")
             return True
+
     stack.pop()
     return False
+
 
 visited = set()
 for node in list(graph.keys()):

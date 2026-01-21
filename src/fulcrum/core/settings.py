@@ -90,6 +90,23 @@ class BillingSettings(BaseModel):
     export_dataset: str = "billing_export"
 
 
+class FinOpsSettings(BaseModel):
+    """Settings for FinOps and cost management."""
+
+    billing_project_id: str = ""
+    billing_account_id: str = ""
+    default_date_range_days: int = 30
+    include_recommendations: bool = True
+    include_gke_costs: bool = True
+    recommenders: List[str] = Field(
+        default_factory=lambda: [
+            "google.compute.instance.MachineTypeRecommender",
+            "google.cloudsql.instance.IdleRecommender",
+            "google.cloudsql.instance.OverprovisionedRecommender",
+        ]
+    )
+
+
 class LabelsSettings(BaseModel):
     owner: List[str] = Field(
         default_factory=lambda: ["owner", "owner_name", "managed_by"]
@@ -121,6 +138,7 @@ class Settings(BaseModel):
     org: OrgSettings = OrgSettings()
     catalog: CatalogSettings = CatalogSettings()
     billing: BillingSettings = BillingSettings()
+    finops: FinOpsSettings = FinOpsSettings()
     labels: LabelsSettings = LabelsSettings()
     redaction: RedactionSettings = RedactionSettings()
     refresh: RefreshSettings = RefreshSettings()
@@ -228,6 +246,7 @@ def load_settings(path: Optional[str] = None) -> Settings:
                 org=OrgSettings(**data.get("org", {})),
                 catalog=CatalogSettings(**data.get("catalog", {})),
                 billing=BillingSettings(**data.get("billing", {})),
+                finops=FinOpsSettings(**data.get("finops", {})),
                 labels=LabelsSettings(**data.get("labels", {})),
                 redaction=RedactionSettings(**data.get("redaction", {})),
                 refresh=RefreshSettings(**data.get("refresh", {})),
@@ -259,6 +278,13 @@ def save_settings(path: Optional[str], s: Settings) -> str:
     doc["catalog"]["limit_per_project"] = s.catalog.limit_per_project
     doc.add("billing", tomlkit.table())
     doc["billing"]["export_dataset"] = s.billing.export_dataset
+    doc.add("finops", tomlkit.table())
+    doc["finops"]["billing_project_id"] = s.finops.billing_project_id
+    doc["finops"]["billing_account_id"] = s.finops.billing_account_id
+    doc["finops"]["default_date_range_days"] = s.finops.default_date_range_days
+    doc["finops"]["include_recommendations"] = s.finops.include_recommendations
+    doc["finops"]["include_gke_costs"] = s.finops.include_gke_costs
+    doc["finops"]["recommenders"] = s.finops.recommenders
     doc.add("labels", tomlkit.table())
     doc["labels"]["owner"] = s.labels.owner
     doc["labels"]["cost_center"] = s.labels.cost_center

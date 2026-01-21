@@ -231,6 +231,59 @@ class ExecutiveReportStrategy(ReportStrategy):
         return f"{name}.md"
 
 
+class FinOpsReportStrategy(ReportStrategy):
+    """FinOps report strategy for cost analysis and optimization."""
+    
+    def get_output_subdir(self) -> str:
+        return "finops"
+
+    def format_page(self, name: str, headers: List[str], rows: List[List[str]]) -> str:
+        """Format a FinOps report page."""
+        from .markdown import header, table
+        
+        title = name.replace("_", " ").title()
+        content = header(2, title)
+        if headers:
+            content += table(headers, rows)
+        else:
+            content += "No data available\n"
+        return content
+
+    def format_index(self, pages: Dict[str, str], author: str) -> str:
+        """Format the FinOps report index."""
+        from .markdown import header, link, escape
+        
+        lines: List[str] = []
+        lines.append(header(2, "FinOps Report Overview"))
+        lines.append(f"Author: {escape(author)}\n")
+        lines.append(f"Generated: {datetime.utcnow().isoformat()}Z\n\n")
+        lines.append(header(3, "Contents"))
+        
+        # Add cost summary
+        lines.append(header(3, "Cost Summary"))
+        
+        # Add recommendations if available
+        if "recommendations" in pages:
+            rel = os.path.relpath(pages["recommendations"], self.config.output_dir)
+            lines.append(f"- [Cost Optimization Recommendations]({rel})")
+        
+        # Add GKE costs if available
+        if "gke_costs" in pages:
+            rel = os.path.relpath(pages["gke_costs"], self.config.output_dir)
+            lines.append(f"- [GKE Cost Analysis]({rel})")
+        
+        # Add other pages
+        for name in sorted(pages.keys()):
+            if name not in ["recommendations", "gke_costs"]:
+                rel = os.path.relpath(pages[name], self.config.output_dir)
+                lines.append(f"- [{name.replace('_', ' ').title()}]({rel})")
+        
+        return "\n".join(lines)
+
+    def get_project_filename(self, name: str) -> str:
+        return f"{name}.md"
+
+
 class ReportBuilder:
     """
     Unified report builder with strategy pattern.
@@ -243,6 +296,7 @@ class ReportBuilder:
         "std": StandardReportStrategy,
         "sec": StandardReportStrategy,
         "executive": ExecutiveReportStrategy,
+        "finops": "FinOpsReportStrategy",  # Lazy reference for now
     }
 
     def __init__(self, strategy: Optional[ReportStrategy] = None):

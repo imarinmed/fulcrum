@@ -10,6 +10,13 @@ limit_per_project = 500
 [billing]
 export_dataset = "billing_export"
 
+[finops]
+billing_project_id = ""  # GCP project with BigQuery billing exports
+billing_account_id = "001218-5EDEDC-6D6A8E"  # Your billing account ID
+default_date_range_days = 30
+include_recommendations = true
+include_gke_costs = true
+
 [labels]
 owner = ["owner", "owner_name", "managed_by"]
 cost_center = ["cost_center", "cc", "costcentre"]

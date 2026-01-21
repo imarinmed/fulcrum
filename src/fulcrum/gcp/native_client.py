@@ -13,7 +13,7 @@ Usage:
     )
 """
 
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional
 from google.auth.credentials import Credentials
 
 
@@ -22,14 +22,14 @@ def build_compute_client(creds: Credentials):
     """Build a native Compute Engine client."""
     from google.cloud import compute_v1
 
-    return compute_v1.InstancesClient(credentials=cred)
+    return compute_v1.InstancesClient(credentials=creds)
 
 
 def list_instances_native(project_id: str, creds: Credentials) -> List[Dict]:
     """List all compute instances in a project using native client."""
     from google.cloud import compute_v1
 
-    client = compute_v1.InstancesClient(credentials=cred)
+    client = compute_v1.InstancesClient(credentials=creds)
     agg_list = compute_v1.AggregatedListInstancesRequest()
     result = client.aggregated_list(project=project_id, request=agg_list)
     items = []
@@ -44,7 +44,7 @@ def list_firewalls_native(project_id: str, creds: Credentials) -> List[Dict]:
     """List all firewall rules in a project using native client."""
     from google.cloud import compute_v1
 
-    client = compute_v1.FirewallClient(credentials=cred)
+    client = compute_v1.FirewallPoliciesClient(credentials=creds)
     result = client.list(project=project_id)
     return [f.to_dict() for f in result.items]
 
@@ -53,7 +53,7 @@ def list_networks_native(project_id: str, creds: Credentials) -> List[Dict]:
     """List all networks in a project using native client."""
     from google.cloud import compute_v1
 
-    client = compute_v1.NetworksClient(credentials=cred)
+    client = compute_v1.NetworksClient(credentials=creds)
     result = client.list(project=project_id)
     return [n.to_dict() for n in result.items]
 
@@ -64,7 +64,7 @@ def list_subnetworks_native(
     """List all subnetworks in a project/region using native client."""
     from google.cloud import compute_v1
 
-    client = compute_v1.SubnetworksClient(credentials=cred)
+    client = compute_v1.SubnetworksClient(credentials=creds)
     if region:
         result = client.list(project=project_id, region=region)
     else:
@@ -76,26 +76,35 @@ def list_subnetworks_native(
 # Cloud Resource Manager
 def build_crm_client(creds: Credentials):
     """Build a native Cloud Resource Manager client."""
-    from google.cloud import resource_manager
+    from google.cloud import resource_manager_v3
 
-    return resource_manager.Client(credentials=cred)
+    return resource_manager_v3.Client(credentials=creds)
 
 
 def get_iam_policy_native(project_id: str, creds: Credentials) -> Dict:
     """Get IAM policy for a project using native client."""
-    from google.cloud import resource_manager
+    from google.cloud import resource_manager_v3
 
-    client = resource_manager.Client(credentials=cred)
-    project = client.fetch_project(project_id)
-    return {"bindings": []}  # Simplified for now
+    client = resource_manager_v3.Client(credentials=creds)
+    # Use projects.getIamPolicy API
+    from google.cloud import resource_manager_v3
+
+    client = resource_manager_v3.ProjectsClient(credentials=creds)
+    name = f"projects/{project_id}"
+    policy = client.get_iam_policy(resource=name)
+    return {
+        "bindings": [
+            {"role": b.role, "members": list(b.members)} for b in policy.bindings
+        ]
+    }
 
 
 # GKE / Kubernetes Engine
-def build_container_client(cred):
+def build_container_client(creds: Credentials):
     """Build a native GKE/Kubernetes Engine client."""
     from google.cloud import container_v1
 
-    return container_v1.ClusterManagerClient(credentials=cred)
+    return container_v1.ClusterManagerClient(credentials=creds)
 
 
 def list_gke_clusters_native(
@@ -104,7 +113,7 @@ def list_gke_clusters_native(
     """List all GKE clusters in a project using native client."""
     from google.cloud import container_v1
 
-    client = container_v1.ClusterManagerClient(credentials=cred)
+    client = container_v1.ClusterManagerClient(credentials=creds)
     parent = f"projects/{project_id}/locations/{region}"
     result = client.list_clusters(parent=parent)
     return [c.to_dict() for c in result.clusters]
@@ -136,91 +145,21 @@ def list_buckets_native(project_id: str, creds: Credentials) -> List[Dict]:
     return items
 
 
-def list_firewalls_native(project_id: str, creds: Credentials) -> List[Dict]:
-    """List all firewall rules in a project using native client."""
-    from google.cloud import compute_v1
-
-    client = compute_v1.FirewallClient(credentials=cred)
-    result = client.list(project=project_id)
-    return [f.to_dict() for f in result.items]
-
-
-def list_networks_native(project_id: str, creds: Credentials) -> List[Dict]:
-    """List all networks in a project using native client."""
-    from google.cloud import compute_v1
-
-    client = compute_v1.NetworksClient(credentials=cred)
-    result = client.list(project=project_id)
-    return [n.to_dict() for n in result.items]
-
-
-def list_subnetworks_native(
-    project_id: str, region: Optional[str], creds: Credentials
-) -> List[Dict]:
-    """List all subnetworks in a project/region using native client."""
-    from google.cloud import compute_v1
-
-    client = compute_v1.SubnetworksClient(credentials=cred)
-    if region:
-        result = client.list(project=project_id, region=region)
-    else:
-        agg_list = compute_v1.AggregatedListSubnetworksRequest()
-        result = client.aggregated_list(project=project_id, request=agg_list)
-    return [s.to_dict() for s in result.items]
-
-
-# Cloud Resource Manager
-def build_crm_client(creds: Credentials):
-    """Build a native Cloud Resource Manager client."""
-    from google.cloud import resource_manager
-
-    return resource_manager.Client(credentials=cred)
-
-
-def get_iam_policy_native(project_id: str, creds: Credentials) -> Dict:
-    """Get IAM policy for a project using native client."""
-    from google.cloud import resource_manager
-
-    client = resource_manager.Client(credentials=cred)
-    project = client.fetch_project(project_id)
-    return {"bindings": []}  # Simplified for now
-
-
 # Cloud SQL
 def build_sqladmin_client(creds: Credentials):
     """Build a native Cloud SQL Admin client."""
     from google.cloud import sql_admin
 
-    return sql_admin.Client(credentials=cred)
+    return sql_admin.Client(credentials=creds)
 
 
 def list_sql_instances_native(project_id: str, creds: Credentials) -> List[Dict]:
     """List all Cloud SQL instances in a project using native client."""
     from google.cloud import sql_admin
 
-    client = sql_admin.Client(credentials=cred)
+    client = sql_admin.Client(credentials=creds)
     result = client.instances_list(project=project_id)
     return [i.to_dict() for i in result.items]
-
-
-# GKE / Kubernetes Engine
-def build_container_client(cred):
-    """Build a native GKE/Kubernetes Engine client."""
-    from google.cloud import container_v1
-
-    return container_v1.ClusterManagerClient(credentials=cred)
-
-
-def list_gke_clusters_native(
-    project_id: str, region: str, creds: Credentials
-) -> List[Dict]:
-    """List all GKE clusters in a project using native client."""
-    from google.cloud import container_v1
-
-    client = container_v1.ClusterManagerClient(credentials=cred)
-    parent = f"projects/{project_id}/locations/{region}"
-    result = client.list_clusters(parent=parent)
-    return [c.to_dict() for c in result.clusters]
 
 
 # GKE Backup
@@ -228,7 +167,7 @@ def build_gkebackup_client(creds: Credentials):
     """Build a native GKE Backup client."""
     from google.cloud import gkebackup_v1
 
-    return gkebackup_v1.BackupClient(credentials=cred)
+    return gkebackup_v1.BackupClient(credentials=creds)
 
 
 def list_backup_plans_native(
@@ -237,7 +176,7 @@ def list_backup_plans_native(
     """List GKE Backup plans using native client."""
     from google.cloud import gkebackup_v1
 
-    client = gkebackup_v1.BackupClient(credentials=cred)
+    client = gkebackup_v1.BackupClient(credentials=creds)
     parent = f"projects/{project_id}/locations/{location}"
     result = client.list_backup_plans(parent=parent)
     return [p.to_dict() for p in result.backup_plans]
@@ -247,32 +186,6 @@ def list_backups_native(parent_plan_full_name: str, creds: Credentials) -> List[
     """List backups for a plan using native client."""
     from google.cloud import gkebackup_v1
 
-    client = gkebackup_v1.BackupClient(credentials=cred)
+    client = gkebackup_v1.BackupClient(credentials=creds)
     result = client.list_backups(parent=parent_plan_full_name)
     return [b.to_dict() for b in result.backups]
-
-
-# Storage (using google-cloud-storage which is already native)
-def build_storage_client(creds: Credentials):
-    """Build a native Cloud Storage client."""
-    from google.cloud import storage
-
-    return storage.Client(credentials=creds)
-
-
-def list_buckets_native(project_id: str, creds: Credentials) -> List[Dict]:
-    """List all storage buckets in a project using native client."""
-    from google.cloud import storage
-
-    client = storage.Client(credentials=creds)
-    items = []
-    for bucket in client.list_buckets(project=project_id):
-        items.append(
-            {
-                "name": bucket.name,
-                "location": bucket.location,
-                "storageClass": getattr(bucket, "storage_class", ""),
-                "labels": dict(bucket.labels or {}),
-            }
-        )
-    return items
